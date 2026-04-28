@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttendIQ · SAIT Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0b0f;
+  --bg2: #111318;
+  --bg3: #181b22;
+  --surface: #1e2129;
+  --surface2: #252830;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f1f5;
+  --muted: #7a8099;
+  --muted2: #4a5068;
+
+  --accent: #6c63ff;
+  --accent2: #8b83ff;
+  --accent-glow: rgba(108,99,255,0.25);
+
+  --green: #22d3a0;
+  --green-bg: rgba(34,211,160,0.08);
+  --red: #ff5e7a;
+  --red-bg: rgba(255,94,122,0.08);
+  --amber: #ffb84d;
+  --amber-bg: rgba(255,184,77,0.08);
+  --blue: #4da6ff;
+  --blue-bg: rgba(77,166,255,0.08);
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font: 'Outfit', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+
+[data-theme="light"] {
+  --bg: #f5f4f8;
+  --bg2: #eeecf5;
+  --bg3: #e8e6f0;
+  --surface: #ffffff;
+  --surface2: #f8f7fc;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.15);
+  --text: #1a1b2e;
+  --muted: #6b7089;
+  --muted2: #9fa3b8;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 58px;
+  background: rgba(10,11,15,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 14px;
+  z-index: 100;
+}
+[data-theme="light"] .topbar { background: rgba(245,244,248,0.85); }
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+.logo-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.logo span { color: var(--accent2); }
+.topbar-badge {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--mono);
+  background: var(--accent-glow);
+  color: var(--accent2);
+  border: 1px solid rgba(108,99,255,0.3);
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.08em;
+}
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.theme-btn {
+  width: 34px; height: 34px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+/* ── LAYOUT ── */
+.shell {
+  display: flex;
+  padding-top: 58px;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 24px 20px;
+  position: sticky;
+  top: 58px;
+  height: calc(100vh - 58px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 10px;
+}
+
+/* ── UPLOAD ZONE ── */
+.upload-area {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.upload-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, var(--accent-glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.upload-area:hover::before, .upload-area.drag::before { opacity: 1; }
+.upload-area:hover, .upload-area.drag {
+  border-color: var(--accent);
+  background: rgba(108,99,255,0.04);
+}
+.upload-icon {
+  width: 46px; height: 46px;
+  background: var(--surface);
+  border-radius: 12px;
+  margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  border: 1px solid var(--border);
+}
+.upload-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.upload-sub { font-size: 12px; color: var(--muted); }
+.file-name {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--accent2);
+  font-family: var(--mono);
+  background: var(--accent-glow);
+  padding: 3px 10px;
+  border-radius: 20px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sample-btn {
+  font-size: 12px;
+  color: var(--blue);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+.sample-btn:hover { opacity: 0.7; }
+
+/* ── FORM ── */
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.form-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  transition: all 0.2s;
+  width: 100%;
+}
+.form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.form-hint { font-size: 11px; color: var(--muted2); }
+
+/* ── SLIDER ── */
+.slider-wrap { display: flex; align-items: center; gap: 10px; }
+.slider-val {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent2);
+  min-width: 42px;
+  text-align: right;
+}
+input[type=range] {
+  -webkit-appearance: none;
+  flex: 1;
+  height: 4px;
+  background: var(--border2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  transition: transform 0.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--surface);
+  transition: all 0.2s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface2); border-color: var(--border2); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+}
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 20px var(--accent-glow); }
+
+.btn-danger { background: var(--red-bg); border-color: rgba(255,94,122,0.25); color: var(--red); }
+.btn-danger:hover { background: rgba(255,94,122,0.15); }
+.btn-green { background: var(--green-bg); border-color: rgba(34,211,160,0.25); color: var(--green); }
+.btn-green:hover { background: rgba(34,211,160,0.15); }
+
+.btn-sm { padding: 5px 11px; font-size: 11px; border-radius: 6px; }
+.btn-full { width: 100%; justify-content: center; padding: 12px; }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ── MAIN CONTENT ── */
+.main { flex: 1; padding: 24px; overflow: hidden; }
+
+/* ── PLACEHOLDER ── */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  text-align: center;
+  gap: 16px;
+}
+.placeholder-icon {
+  width: 80px; height: 80px;
+  background: var(--surface);
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  border: 1px solid var(--border);
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.placeholder h2 { font-family: var(--display); font-size: 22px; font-weight: 700; }
+.placeholder p { font-size: 14px; color: var(--muted); max-width: 320px; }
+
+/* ── STATS GRID ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--stat-color, var(--accent));
+}
+.stat-card:hover { border-color: var(--border2); }
+.stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.stat-val { font-family: var(--display); font-size: 32px; font-weight: 800; line-height: 1; color: var(--stat-color, var(--text)); }
+.stat-sub { font-size: 11px; color: var(--muted2); margin-top: 4px; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+}
+.search-wrap svg {
+  position: absolute;
+  left: 11px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  width: 14px;
+}
+.search-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px 9px 34px;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  transition: all 0.2s;
+}
+.search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.search-input::placeholder { color: var(--muted2); }
+
+.tab-group {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 2px;
+}
+.tab-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s;
+  border: none;
+  background: none;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.tab-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.select-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 12px;
+  font-family: var(--font);
+  color: var(--text);
+  cursor: pointer;
+}
+.select-input:focus { outline: none; border-color: var(--accent); }
+
+/* ── CHARTS GRID ── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.chart-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+/* ── TABLE ── */
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  user-select: none;
+}
+th.sortable { cursor: pointer; }
+th.sortable:hover { color: var(--accent2); }
+.sort-icon { margin-left: 4px; opacity: 0.5; font-size: 9px; }
+
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr { transition: background 0.15s; }
+tr:hover td { background: rgba(108,99,255,0.04); }
+
+tr.flagged td { background: rgba(255,94,122,0.03); }
+tr.flagged td:first-child { border-left: 2px solid var(--red); }
+tr.flagged:hover td { background: rgba(255,94,122,0.07); }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.badge-red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,94,122,0.2); }
+.badge-green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,211,160,0.2); }
+.badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(255,184,77,0.2); }
+
+/* ── PROGRESS ── */
+.progress-wrap { display: flex; align-items: center; gap: 8px; }
+.progress-track { flex: 1; height: 5px; background: var(--bg3); border-radius: 99px; overflow: hidden; min-width: 50px; }
+.progress-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+.pct-text { font-family: var(--mono); font-size: 12px; font-weight: 600; min-width: 38px; }
+
+/* ── AVATAR ── */
+.avatar {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.student-info { display: flex; align-items: center; gap: 10px; }
+.student-name { font-weight: 600; font-size: 13px; }
+.student-roll { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* ── WARNING PREVIEW ── */
+.warn-text {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.5;
+}
+.warn-text.loaded { color: var(--text); font-style: normal; }
+
+/* ── SPINNER ── */
+.spinner {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── MODAL ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  opacity: 0;
+  animation: fadeIn 0.2s forwards;
+}
+@keyframes fadeIn { to { opacity: 1; } }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  padding: 28px;
+  max-width: 520px;
+  width: 92%;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.5);
+  transform: scale(0.95) translateY(10px);
+  animation: slideUp 0.2s forwards;
+}
+@keyframes slideUp { to { transform: scale(1) translateY(0); } }
+
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.modal-title { font-family: var(--display); font-size: 17px; font-weight: 700; }
+.modal-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.close-btn {
+  width: 30px; height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.close-btn:hover { border-color: var(--red); color: var(--red); }
+.modal-warning {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text);
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.modal-footer { display: flex; gap: 8px; margin-top: 18px; }
+
+/* ── TOAST ── */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9999;
+}
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(120%);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  min-width: 200px;
+  max-width: 320px;
+}
+.toast.show { transform: translateX(0); }
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--accent); }
+.toast-icon { font-size: 15px; flex-shrink: 0; }
+
+/* ── EXPORT PANEL ── */
+.export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* ── RISK METER ── */
+.risk-meter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+.risk-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.risk-critical .risk-dot { background: var(--red); }
+.risk-high .risk-dot { background: var(--amber); }
+.risk-ok .risk-dot { background: var(--green); }
+
+/* ── PAGINATION ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+.page-btns { display: flex; gap: 4px; }
+.page-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  font-family: var(--font);
+}
+.page-btn:hover { border-color: var(--accent); color: var(--accent2); }
+.page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .sidebar { width: 280px; }
+  .stats-grid { grid-template-columns: repeat(3,1fr); }
+  .charts-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .shell { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; }
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+}
+
+/* ── SCROLL ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+/* ── TRANSITIONS ── */
+.fade-in { animation: fadeInUp 0.4s ease both; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── ATTENDANCE GAUGE ── */
+.gauge-container { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.gauge-label { font-size: 11px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    Attend<span>IQ</span>
+  </div>
+  <div class="topbar-badge">SAIT · SCENARIO A</div>
+  <div class="topbar-right">
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+    <a class="sample-btn" onclick="downloadSample()" style="margin:0;">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Sample CSV
+    </a>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <div class="panel-label">Data Source</div>
+      <div class="upload-area" id="drop-zone">
+        <div class="upload-icon">📂</div>
+        <div class="upload-title">Drop your file here</div>
+        <div class="upload-sub">CSV or Excel (.xlsx / .xls) — max 10 MB</div>
+        <div class="file-name" id="file-label" style="display:none"></div>
+      </div>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none">
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="panel-label">Configuration</div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Attendance Threshold</label>
+          <div class="slider-wrap">
+            <input type="range" id="threshold" min="1" max="100" value="75" oninput="document.getElementById('thresh-val').textContent=this.value+'%'">
+            <div class="slider-val" id="thresh-val">75%</div>
+          </div>
+          <div class="form-hint">Students below this will be flagged as at-risk</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Working Days <span style="color:var(--muted2)">(optional)</span></label>
+          <input type="number" class="form-input" id="total-days" placeholder="Auto-detect from file">
+          <div class="form-hint">Overrides the value in your file</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-primary btn-full" onclick="analyze()" id="analyze-btn">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Analyze Attendance
+    </button>
+
+    <!-- Export panel -->
+    <div id="export-panel" style="display:none;">
+      <div class="divider"></div>
+      <div class="panel-label">Export & Actions</div>
+      <div class="export-grid">
+        <button class="btn btn-sm" onclick="exportFile('csv')">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          CSV
+        </button>
+        <button class="btn btn-sm" onclick="exportFile('pdf')">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          PDF
+        </button>
+      </div>
+      <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center;margin-top:8px" onclick="generateAllWarnings()" id="gen-all-btn">
+        ✦ Generate All AI Warnings
+      </button>
+      <div class="form-hint" style="margin-top:6px">PDF includes AI warning letters</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- Placeholder -->
+    <div class="placeholder" id="placeholder">
+      <div class="placeholder-icon">📊</div>
+      <h2>Ready to Analyze</h2>
+      <p>Upload an attendance CSV or Excel file and configure your threshold to get started.</p>
+      <div style="font-size:12px; color:var(--muted2); margin-top:4px; font-family:var(--mono);">
+        Columns: Name · Roll No · Present · Total Days
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results" style="display:none;">
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid"></div>
+
+      <!-- Charts -->
+      <div class="charts-grid" id="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Attendance Distribution</div>
+          <canvas id="chart-bar" height="160"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Status Overview</div>
+          <canvas id="chart-doughnut" height="160"></canvas>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-card fade-in">
+        <div style="padding: 14px 16px; border-bottom: 1px solid var(--border);">
+          <div class="toolbar">
+            <div class="search-wrap">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" class="search-input" id="search-input" placeholder="Search by name or roll no…" oninput="onSearch()">
+            </div>
+            <div class="tab-group">
+              <button class="tab-btn active" onclick="switchTab('all',this)">All</button>
+              <button class="tab-btn" onclick="switchTab('flagged',this)">Flagged</button>
+              <button class="tab-btn" onclick="switchTab('clear',this)">Clear</button>
+            </div>
+            <select class="select-input" id="sort-select" onchange="sortBySelect()">
+              <option value="">Sort by…</option>
+              <option value="pct-asc">% Asc</option>
+              <option value="pct-desc">% Desc</option>
+              <option value="name-asc">Name A–Z</option>
+              <option value="name-desc">Name Z–A</option>
+              <option value="deficit-desc">Deficit ↓</option>
+            </select>
+          </div>
+          <div id="result-count" style="font-size:12px; color:var(--muted);"></div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:24%">Student</th>
+                <th style="width:10%">Present</th>
+                <th style="width:8%">Total</th>
+                <th style="width:18%">Attendance</th>
+                <th style="width:10%">Deficit</th>
+                <th style="width:10%">Risk</th>
+                <th style="width:9%">Status</th>
+                <th>AI Warning</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">AI Warning Letter</div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-warning" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-green btn-sm" onclick="copyWarning()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy Text
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="regenWarning()">↻ Regenerate</button>
+      <button class="btn btn-sm" style="margin-left:auto" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+/* =====================================================
+   STATE
+   ===================================================== */
+let allStudents   = [];
+let filtered      = [];
+let currentTab    = 'all';
+let currentThresh = 75;
+let modalIdx      = null;
+let genAllRunning = false;
+let searchQ       = '';
+let sortVal       = '';
+let page          = 1;
+const PAGE_SIZE   = 15;
+let barChart, doughnutChart;
+
+/* =====================================================
+   THEME
+   ===================================================== */
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+  if (barChart) { barChart.destroy(); doughnutChart.destroy(); renderCharts(); }
+}
+
+/* =====================================================
+   FILE UPLOAD
+   ===================================================== */
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileLabel = document.getElementById('file-label');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+function setFile(f) {
+  const dt = new DataTransfer();
+  dt.items.add(f);
+  fileInput.files = dt.files;
+  fileLabel.textContent = f.name;
+  fileLabel.style.display = 'inline-block';
+}
+
+/* =====================================================
+   SAMPLE CSV
+   ===================================================== */
+function downloadSample() {
+  const csv = `Name,Roll No,Present,Total Days
+Ayesha Khan,CS-001,72,100
+Bilal Ahmed,CS-002,58,100
+Sara Hussain,CS-003,91,100
+Umar Farooq,CS-004,65,100
+Zainab Malik,CS-005,80,100
+Hamid Raza,CS-006,49,100
+Nadia Qureshi,CS-007,77,100
+Kamran Sheikh,CS-008,70,100
+Farah Siddiqui,CS-009,83,100
+Tariq Mehmood,CS-010,55,100
+Hina Baig,CS-011,95,100
+Aqib Nawaz,CS-012,62,100
+Sana Javed,CS-013,88,100
+Mohsin Ali,CS-014,41,100
+Rabia Tahir,CS-015,76,100
+Faisal Iqbal,CS-016,60,100
+Maham Noor,CS-017,93,100
+Zubair Khan,CS-018,67,100
+Amna Butt,CS-019,85,100
+Rehman Sajid,CS-020,53,100`;
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sample_attendance.csv';
+  a.click();
+}
+
+/* =====================================================
+   ANALYZE
+   ===================================================== */
+async function analyze() {
+  const file = fileInput.files[0];
+  if (!file) { showToast('Please select a file first.', 'error'); return; }
+
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyzing…';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('threshold', document.getElementById('threshold').value);
+  const td = document.getElementById('total-days').value;
+  if (td) fd.append('total_days', td);
+
+  try {
+    const res  = await fetch('/analyze', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, 'error'); return; }
+
+    allStudents   = data.students.map(s => ({ ...s, warning: null, loading: false }));
+    currentThresh = data.threshold;
+    searchQ       = '';
+    sortVal       = '';
+    page          = 1;
+    document.getElementById('search-input').value = '';
+    document.getElementById('sort-select').value  = '';
+
+    applyFilters();
+    renderStats();
+    renderCharts();
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('results').style.display     = 'block';
+    document.getElementById('export-panel').style.display = 'block';
+
+    showToast(`✓ Analyzed ${allStudents.length} students`, 'success');
+  } catch (e) {
+    showToast('Network error. Is the Flask server running?', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Analyze Attendance';
+  }
+}
+
+/* =====================================================
+   FILTER / SEARCH / SORT
+   ===================================================== */
+function applyFilters() {
+  let list = [...allStudents];
+
+  if (currentTab === 'flagged') list = list.filter(s => s.flagged);
+  if (currentTab === 'clear')   list = list.filter(s => !s.flagged);
+
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    list = list.filter(s => s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q));
+  }
+
+  if (sortVal === 'pct-asc')      list.sort((a,b) => a.pct - b.pct);
+  else if (sortVal === 'pct-desc') list.sort((a,b) => b.pct - a.pct);
+  else if (sortVal === 'name-asc') list.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sortVal === 'name-desc')list.sort((a,b) => b.name.localeCompare(a.name));
+  else if (sortVal === 'deficit-desc') list.sort((a,b) => b.deficit - a.deficit);
+
+  filtered = list;
+  page = 1;
+  renderTable();
+}
+
+function onSearch() { searchQ = document.getElementById('search-input').value; applyFilters(); }
+function sortBySelect() { sortVal = document.getElementById('sort-select').value; applyFilters(); }
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+/* =====================================================
+   STATS
+   ===================================================== */
+function renderStats() {
+  const flagged  = allStudents.filter(s => s.flagged).length;
+  const cleared  = allStudents.length - flagged;
+  const avg      = (allStudents.reduce((a,s) => a + s.pct, 0) / allStudents.length).toFixed(1);
+  const critical = allStudents.filter(s => s.pct < 60).length;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card" style="--stat-color:var(--blue)">
+      <div class="stat-label">Total Students</div>
+      <div class="stat-val">${allStudents.length}</div>
+      <div class="stat-sub">uploaded file</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--red)">
+      <div class="stat-label">Flagged</div>
+      <div class="stat-val">${flagged}</div>
+      <div class="stat-sub">below ${currentThresh}%</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--green)">
+      <div class="stat-label">Clear</div>
+      <div class="stat-val">${cleared}</div>
+      <div class="stat-sub">meeting threshold</div>
+    </div>
+    <div class="stat-card" style="--stat-color:${avg < currentThresh ? 'var(--red)' : avg < currentThresh+10 ? 'var(--amber)' : 'var(--green)'}">
+      <div class="stat-label">Avg Attendance</div>
+      <div class="stat-val">${avg}%</div>
+      <div class="stat-sub">class average</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--amber)">
+      <div class="stat-label">Critical Risk</div>
+      <div class="stat-val">${critical}</div>
+      <div class="stat-sub">below 60%</div>
+    </div>
+  `;
+}
+
+/* =====================================================
+   CHARTS
+   ===================================================== */
+function getChartColors() {
+  const dark = document.documentElement.dataset.theme !== 'light';
+  return { text: dark ? '#7a8099' : '#6b7089', grid: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' };
+}
+
+function renderCharts() {
+  const cc = getChartColors();
+  Chart.defaults.color = cc.text;
+  Chart.defaults.font.family = "'Outfit', sans-serif";
+
+  // Bar chart – attendance distribution
+  const brackets = [
+    { label: '<50%', min:0, max:50, color:'#ff5e7a' },
+    { label: '50–60%', min:50, max:60, color:'#ff7b52' },
+    { label: '60–75%', min:60, max:75, color:'#ffb84d' },
+    { label: '75–90%', min:75, max:90, color:'#4da6ff' },
+    { label: '>90%', min:90, max:101, color:'#22d3a0' },
+  ];
+  const counts = brackets.map(b => allStudents.filter(s => s.pct >= b.min && s.pct < b.max).length);
+
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('chart-bar'), {
+    type: 'bar',
+    data: {
+      labels: brackets.map(b => b.label),
+      datasets: [{
+        data: counts,
+        backgroundColor: brackets.map(b => b.color + '99'),
+        borderColor: brackets.map(b => b.color),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: cc.grid } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Doughnut
+  const flagged = allStudents.filter(s => s.flagged).length;
+  const critical = allStudents.filter(s => s.pct < 60).length;
+  const warning  = allStudents.filter(s => s.pct >= 60 && s.flagged).length;
+  const safe     = allStudents.length - flagged;
+
+  if (doughnutChart) doughnutChart.destroy();
+  doughnutChart = new Chart(document.getElementById('chart-doughnut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Safe', 'At Risk', 'Critical'],
+      datasets: [{
+        data: [safe, warning, critical],
+        backgroundColor: ['#22d3a099','#ffb84d99','#ff5e7a99'],
+        borderColor: ['#22d3a0','#ffb84d','#ff5e7a'],
+        borderWidth: 1.5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, padding: 16 } }
+      }
+    }
+  });
+}
+
+/* =====================================================
+   TABLE
+   ===================================================== */
+function barColor(pct) {
+  if (pct >= 90) return 'var(--green)';
+  if (pct >= 75) return 'var(--blue)';
+  if (pct >= 60) return 'var(--amber)';
+  return 'var(--red)';
+}
+
+function riskLevel(pct) {
+  if (pct < 60) return { cls: 'risk-critical badge badge-red', label: 'Critical' };
+  if (pct < 75) return { cls: 'badge badge-amber', label: 'At Risk' };
+  return { cls: 'badge badge-green', label: 'Safe' };
+}
+
+function avatarBg(name) {
+  const colors = ['#6c63ff','#22d3a0','#ff5e7a','#ffb84d','#4da6ff','#a78bfa'];
+  let hash = 0;
+  for (let c of name) hash = (hash << 5) - hash + c.charCodeAt(0);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function renderTable() {
+  const start = (page - 1) * PAGE_SIZE;
+  const paged = filtered.slice(start, start + PAGE_SIZE);
+
+  document.getElementById('result-count').textContent =
+    `Showing ${start+1}–${Math.min(start+PAGE_SIZE,filtered.length)} of ${filtered.length} students`;
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  paged.forEach(s => {
+    const gi   = allStudents.indexOf(s);
+    const bc   = barColor(s.pct);
+    const risk = riskLevel(s.pct);
+    const initials = s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const bg   = avatarBg(s.name);
+
+    let badge = s.flagged
+      ? '<span class="badge badge-red">⚑ Flagged</span>'
+      : '<span class="badge badge-green">✓ Clear</span>';
+
+    let warnCell = '';
+    if (s.flagged) {
+      if (s.loading) {
+        warnCell = `<span class="spinner"></span> <span style="font-size:11px;color:var(--muted)">Generating…</span>`;
+      } else if (s.warning) {
+        warnCell = `<button class="btn btn-sm btn-green" onclick="openModal(${gi})">
+          View ↗
+        </button>
+        <div class="warn-text loaded" style="margin-top:5px">${s.warning.slice(0,80)}…</div>`;
+      } else {
+        warnCell = `<button class="btn btn-sm" onclick="genWarning(${gi})">Generate AI Letter</button>`;
+      }
+    } else {
+      warnCell = '<span style="color:var(--muted2);font-size:12px">—</span>';
+    }
+
+    const tr = document.createElement('tr');
+    tr.className = s.flagged ? 'flagged' : '';
+    tr.innerHTML = `
+      <td>
+        <div class="student-info">
+          <div class="avatar" style="background:${bg}20;color:${bg};border:1px solid ${bg}40">${initials}</div>
+          <div>
+            <div class="student-name">${s.name}</div>
+            <div class="student-roll">${s.roll}</div>
+          </div>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-weight:600">${Math.round(s.present)}</td>
+      <td style="color:var(--muted);font-family:var(--mono)">${Math.round(s.total)}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-fill" style="width:${Math.min(s.pct,100)}%;background:${bc}"></div></div>
+          <span class="pct-text" style="color:${bc}">${s.pct}%</span>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-size:12px;${s.deficit ? 'color:var(--red);font-weight:600':  'color:var(--muted2)'}">
+        ${s.deficit ? '−' + s.deficit + ' days' : '—'}
+      </td>
+      <td><span class="${risk.cls}">${risk.label}</span></td>
+      <td>${badge}</td>
+      <td>${warnCell}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  let btns = '';
+  for (let i = 1; i <= totalPages; i++) {
+    btns += `<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  pg.innerHTML = `
+    <span>${filtered.length} students total</span>
+    <div class="page-btns">
+      <button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>
+      ${btns}
+      <button class="page-btn" onclick="goPage(${page+1})" ${page===totalPages?'disabled':''}>›</button>
+    </div>
+  `;
+}
+
+function goPage(p) {
+  const max = Math.ceil(filtered.length / PAGE_SIZE);
+  if (p < 1 || p > max) return;
+  page = p;
+  renderTable();
+  document.querySelector('.table-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* =====================================================
+   AI WARNINGS
+   ===================================================== */
+async function genWarning(idx) {
+  const s = allStudents[idx];
+  s.loading = true;
+  renderTable();
+
+  try {
+    const res  = await fetch('/warning', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...s, threshold: currentThresh })
+    });
+    const data = await res.json();
+    s.warning = data.warning || data.error || 'Could not generate warning.';
+    if (data.error) showToast(data.error, 'error');
+  } catch (e) { s.warning = 'Network error — check API key in .env'; }
+
+  s.loading = false;
+  renderTable();
+}
+
+async function generateAllWarnings() {
+  if (genAllRunning) return;
+  genAllRunning = true;
+  const btn = document.getElementById('gen-all-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating…';
+
+  const flagged = allStudents.filter(s => s.flagged && !s.warning);
+  for (const s of flagged) await genWarning(allStudents.indexOf(s));
+
+  genAllRunning = false;
+  btn.disabled = false; btn.innerHTML = '✦ Generate All AI Warnings';
+  showToast(`✓ All ${flagged.length} warning letters generated!`, 'success');
+}
+
+/* =====================================================
+   MODAL
+   ===================================================== */
+function openModal(idx) {
+  modalIdx = idx;
+  const s = allStudents[idx];
+  document.getElementById('modal-title').textContent = `Warning Letter — ${s.name}`;
+  document.getElementById('modal-sub').textContent   = `${s.roll} · ${s.pct}% attendance · ${s.deficit} days short`;
+  document.getElementById('modal-body').textContent  = s.warning;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function copyWarning() {
+  navigator.clipboard.writeText(allStudents[modalIdx].warning)
+    .then(() => showToast('✓ Copied to clipboard!', 'success'));
+}
+
+async function regenWarning() {
+  closeModal();
+  allStudents[modalIdx].warning = null;
+  await genWarning(modalIdx);
+  if (allStudents[modalIdx].warning) openModal(modalIdx);
+}
+
+/* =====================================================
+   EXPORT
+   ===================================================== */
+async function exportFile(type) {
+  const res  = await fetch(`/export/${type}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ students: allStudents, threshold: currentThresh })
+  });
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `attendance_report.${type}`;
+  a.click();
+  showToast(`✓ ${type.toUpperCase()} report downloaded!`, 'success');
+}
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+function showToast(msg, type = 'info') {
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type]}</span>${msg}`;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 400);
+  }, 3000);
+}
+</script>
+</body>
+</html>
