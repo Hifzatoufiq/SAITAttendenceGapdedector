@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttendIQ - Advanced Attendance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #6c63ff;
+  --danger: #ff5e7a;
+  --success: #22d3a0;
+  --warning: #ffb84d;
+  --bg: #0a0b0f;
+  --surface: #1e2129;
+  --border: rgba(255,255,255,0.1);
+  --text: #f0f1f5;
+  --muted: #7a8099;
+}
+body { font-family: 'Outfit', -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.logo { font-size: 24px; font-weight: 700; }
+.upload-box { border: 2px dashed var(--border); border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; }
+.upload-box:hover { border-color: var(--primary); background: rgba(108,99,255,0.05); }
+.btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { opacity: 0.9; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
+.stat-value { font-size: 32px; font-weight: 700; margin-top: 10px; }
+.table-container { background: var(--surface); border-radius: 12px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th { background: rgba(0,0,0,0.3); padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; }
+td { padding: 12px; border-bottom: 1px solid var(--border); }
+tr:hover { background: rgba(108,99,255,0.05); }
+.badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-red { background: rgba(255,94,122,0.2); color: var(--danger); }
+.badge-green { background: rgba(34,211,160,0.2); color: var(--success); }
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-content { background: var(--surface); border-radius: 12px; padding: 30px; max-width: 500px; width: 90%; }
+.close { float: right; font-size: 24px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="logo">⚡ AttendIQ</div>
+    <button class="btn btn-primary" onclick="toggleTheme()">🌓 Theme</button>
+  </div>
+
+  <div class="upload-box" id="dropZone">
+    <div style="font-size: 40px; margin-bottom: 10px;">📁</div>
+    <strong>Drop your attendance file here</strong>
+    <p style="color: var(--muted); margin-top: 5px;">CSV or Excel (.xlsx / .xls)</p>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+  </div>
+
+  <div style="margin: 20px 0; display: flex; gap: 15px;">
+    <div>
+      <label>Threshold (%)</label>
+      <input type="number" id="threshold" value="75" min="1" max="100" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+    </div>
+    <button class="btn btn-primary" onclick="analyze()">Analyze</button>
+  </div>
+
+  <div id="results" style="display: none;">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Roll No</th>
+            <th>Present</th>
+            <th>Total</th>
+            <th>%</th>
+            <th>Risk</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top: 20px; display: flex; gap: 10px;">
+      <button class="btn btn-primary" onclick="exportFile('csv')">📥 CSV</button>
+      <button class="btn btn-primary" onclick="exportFile('pdf')">📥 PDF</button>
+      <button class="btn btn-primary" onclick="exportFile('json')">📥 JSON</button>
+      <button class="btn btn-primary" onclick="generateAllWarnings()">✦ Generate Warnings</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="warningModal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h2 id="modalTitle">Warning Letter</h2>
+    <div id="modalBody" style="margin-top: 15px; line-height: 1.6;"></div>
+    <div style="margin-top: 20px; display: flex; gap: 10px;">
+      <button class="btn btn-primary" onclick="copyWarning()">Copy</button>
+      <button class="btn btn-primary" onclick="regenWarning()">Regenerate</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allStudents = [];
+let currentThresh = 75;
+let modalIdx = null;
+
+document.getElementById('dropZone').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('dropZone').addEventListener('dragover', e => { e.preventDefault(); e.target.style.borderColor = 'var(--primary)'; });
+document.getElementById('dropZone').addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('fileInput').files = e.dataTransfer.files;
+    analyze();
+  }
+});
+
+async function analyze() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) { alert('Please select a file'); return; }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('threshold', document.getElementById('threshold').value);
+  currentThresh = parseFloat(document.getElementById('threshold').value);
+
+  try {
+    const res = await fetch('/analyze', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) { alert('Error: ' + data.error); return; }
+
+    allStudents = data.students.map(s => ({ ...s, warning: null }));
+    renderStats(data);
+    renderTable();
+    document.getElementById('results').style.display = 'block';
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function renderStats(data) {
+  const html = `
+    <div class="stat-card">
+      <div class="stat-label">Total Students</div>
+      <div class="stat-value">${data.total_students}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Flagged</div>
+      <div class="stat-value" style="color: var(--danger);">${data.flagged_count}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Clear</div>
+      <div class="stat-value" style="color: var(--success);">${data.total_students - data.flagged_count}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Attendance</div>
+      <div class="stat-value">${(allStudents.reduce((a, s) => a + s.pct, 0) / allStudents.length).toFixed(1)}%</div>
+    </div>
+  `;
+  document.getElementById('statsGrid').innerHTML = html;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  allStudents.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    if (s.flagged) tr.style.background = 'rgba(255,94,122,0.05)';
+    tr.innerHTML = `
+      <td><strong>${s.name}</strong></td>
+      <td>${s.roll}</td>
+      <td>${Math.round(s.present)}</td>
+      <td>${Math.round(s.total)}</td>
+      <td><strong>${s.pct}%</strong></td>
+      <td>${s.ml_risk ? s.ml_risk.toFixed(0) : s.risk_score.toFixed(0)}</td>
+      <td>${s.flagged ? '<span class="badge badge-red">FLAGGED</span>' : '<span class="badge badge-green">Clear</span>'}</td>
+      <td>${s.flagged ? `<button class="btn btn-primary" style="padding: 5px 10px; font-size: 11px;" onclick="genWarning(${i})">Generate</button>` : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function genWarning(idx) {
+  const s = allStudents[idx];
+  try {
+    const res = await fetch('/warning', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...s, threshold: currentThresh })
+    });
+    const data = await res.json();
+    s.warning = data.warning || data.error;
+    openModal(idx);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function generateAllWarnings() {
+  const flagged = allStudents.filter(s => s.flagged && !s.warning);
+  for (let i = 0; i < flagged.length; i++) {
+    const idx = allStudents.indexOf(flagged[i]);
+    await genWarning(idx);
+  }
+  alert('All warnings generated!');
+}
+
+function openModal(idx) {
+  modalIdx = idx;
+  const s = allStudents[idx];
+  document.getElementById('modalTitle').textContent = `Warning — ${s.name} (${s.roll})`;
+  document.getElementById('modalBody').textContent = s.warning;
+  document.getElementById('warningModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('warningModal').classList.remove('show');
+}
+
+function copyWarning() {
+  navigator.clipboard.writeText(allStudents[modalIdx].warning);
+  alert('Copied!');
+}
+
+async function regenWarning() {
+  allStudents[modalIdx].warning = null;
+  await genWarning(modalIdx);
+}
+
+async function exportFile(type) {
+  const payload = { students: allStudents, threshold: currentThresh };
+  const res = await fetch(`/export/${type}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `attendance.${type}`;
+  a.click();
+}
+
+function toggleTheme() {
+  document.body.style.filter = document.body.style.filter === 'invert(1)' ? 'none' : 'invert(1)';
+}
+</script>
+
+</body>
+</html>
