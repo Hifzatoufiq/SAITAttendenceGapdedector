@@ -1,3 +1,8 @@
+"""
+SAIT Attendance Gap Detector
+Scenario A — AI Automation Engineer Evaluation
+Author: Candidate
+"""
 
 import os
 import io
@@ -19,6 +24,9 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
 
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 COLUMN_ALIASES = {
     "name":    ["name", "student name", "student", "full name", "studentname"],
@@ -96,6 +104,9 @@ def compute_stats(students, threshold, total_override=None):
     return results
 
 
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 @app.route("/")
 def index():
